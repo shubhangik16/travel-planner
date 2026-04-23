@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Wandr — AI Travel Planner</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+
+    <style>
+        /* ── ITINERARY ───────────────────────────────────────── */
+        .itinerary-days { display: flex; flex-direction: column; gap: 16px; }
+
+        .day-block {
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-left: 2px solid var(--gold-border);
+            border-radius: var(--radius-sm);
+            padding: 18px 22px;
+            transition: border-color 0.2s, background 0.2s, transform 0.2s;
+        }
+        .day-block:hover {
+            border-color: var(--gold-border);
+            border-left-color: var(--gold);
+            background: rgba(201,168,76,0.04);
+            transform: translateX(4px);
+        }
+        .day-label {
+            font-family: var(--font-display);
+            font-size: 13px;
+            color: var(--gold);
+            letter-spacing: 0.14em;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .day-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, var(--gold-border), transparent);
+        }
+        .day-text {
+            font-size: 14px;
+            line-height: 1.8;
+            color: var(--text-secondary);
+            font-weight: 300;
+        }
+
+        /* ── HOTELS ──────────────────────────────────────────── */
+        .hotels-list { display: flex; flex-direction: column; gap: 12px; }
+
+        .hotel-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            padding: 16px 18px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            transition: border-color 0.2s, background 0.2s, transform 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .hotel-item::before {
+            content: '';
+            position: absolute;
+            left: 0; top: 0; bottom: 0;
+            width: 2px;
+            background: linear-gradient(180deg, var(--gold), transparent);
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        .hotel-item:hover {
+            border-color: var(--gold-border);
+            background: rgba(201,168,76,0.04);
+            transform: translateX(4px);
+        }
+        .hotel-item:hover::before { opacity: 1; }
+        .hotel-icon { font-size: 22px; margin-top: 2px; flex-shrink: 0; }
+        .hotel-info { flex: 1; min-width: 0; }
+        .hotel-name {
+            font-family: var(--font-display);
+            font-size: 18px; font-weight: 400;
+            color: var(--text-primary); margin-bottom: 5px;
+        }
+        .hotel-address {
+            font-size: 13px; color: var(--text-muted);
+            font-weight: 300; white-space: nowrap;
+            overflow: hidden; text-overflow: ellipsis;
+        }
+        .hotel-badge {
+            font-size: 10px; padding: 4px 12px;
+            background: var(--gold-muted);
+            border: 1px solid var(--gold-border);
+            border-radius: 20px; color: var(--gold-light);
+            white-space: nowrap; align-self: center;
+            letter-spacing: 0.08em; text-transform: uppercase;
+            font-weight: 500;
+        }
+
+        /* ── BOOKING ─────────────────────────────────────────── */
+        .booking-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 14px;
+            margin-top: 8px;
+        }
+        .booking-btn {
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            gap: 10px; padding: 24px 12px;
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            text-decoration: none;
+            transition: border-color 0.25s, background 0.25s, transform 0.25s, box-shadow 0.25s;
+            position: relative; overflow: hidden;
+        }
+        .booking-btn::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, var(--gold-muted), transparent);
+            opacity: 0;
+            transition: opacity 0.25s;
+        }
+        .booking-btn:hover {
+            border-color: var(--gold-border);
+            background: rgba(201,168,76,0.06);
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+        }
+        .booking-btn:hover::before { opacity: 1; }
+        .booking-btn-icon {
+            font-size: 32px; line-height: 1;
+            position: relative; z-index: 1;
+            transition: transform 0.2s;
+        }
+        .booking-btn:hover .booking-btn-icon { transform: scale(1.15); }
+        .booking-btn-label {
+            font-size: 14px; font-weight: 500;
+            color: var(--text-primary);
+            letter-spacing: 0.04em;
+            position: relative; z-index: 1;
+        }
+        .booking-btn-sub {
+            font-size: 11px; color: var(--gold);
+            letter-spacing: 0.1em; text-transform: uppercase;
+            position: relative; z-index: 1;
+        }
+
+        /* ── TIPS ────────────────────────────────────────────── */
+        .tips-list { display: flex; flex-direction: column; gap: 12px; }
+        .tip-item {
+            display: flex; align-items: flex-start; gap: 14px;
+            padding: 14px 16px;
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            font-size: 14px; color: var(--text-secondary);
+            line-height: 1.7; font-weight: 300;
+            transition: border-color 0.2s, background 0.2s;
+        }
+        .tip-item:hover {
+            border-color: var(--gold-border);
+            background: rgba(201,168,76,0.03);
+        }
+        .tip-number {
+            font-family: var(--font-display);
+            font-size: 22px; font-weight: 300;
+            color: var(--gold); line-height: 1;
+            flex-shrink: 0; min-width: 24px;
+        }
+
+        /* ── SECTION DIVIDER ─────────────────────────────────── */
+        .section-divider {
+            display: flex; align-items: center;
+            gap: 16px; margin: 48px 0 28px;
+        }
+        .divider-line {
+            flex: 1; height: 1px;
+            background: linear-gradient(90deg, transparent, var(--border), transparent);
+        }
+        .divider-label {
+            font-size: 11px; letter-spacing: 0.18em;
+            text-transform: uppercase; color: var(--gold);
+            padding: 6px 16px;
+            border: 1px solid var(--gold-border);
+            border-radius: 20px;
+            background: var(--gold-muted);
+            white-space: nowrap;
+        }
+
+        @media (max-width: 640px) {
+            .booking-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb orb-1"></div>
+<div class="bg-orb orb-2"></div>
+
+<!-- ── NAVBAR ──────────────────────────────────────────── -->
+<nav class="navbar">
+    <div class="nav-logo">
+        <span class="logo-mark">✦</span>
+        <span>Wandr</span>
+    </div>
+    <span class="nav-tagline">AI-Powered Journeys</span>
+</nav>
+
+<main class="main-wrap">
+
+    <!-- ── HERO ───────────────────────────────────────────── -->
+    <header class="hero">
+        <p class="hero-eyebrow">Your personal travel concierge</p>
+        <h1 class="hero-title">Where will you<br><em>wander</em> next?</h1>
+        <p class="hero-sub">Tell us your dream — we'll craft the perfect itinerary.</p>
+    </header>
+
+    <!-- ── FORM ───────────────────────────────────────────── -->
+    <section class="form-section">
+        <form method="POST" class="travel-form">
+            <div class="form-grid">
+                <div class="field-group">
+                    <label class="field-label">From</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <circle cx="12" cy="12" r="3"/>
+                            <path d="M12 2v3m0 14v3M2 12h3m14 0h3"/>
+                        </svg>
+                        <input class="field-input" type="text" name="source" placeholder="Source city"
+                               value="{{ source if source else '' }}" required>
+                    </div>
+                </div>
+
+                <div class="field-divider">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="20" height="20">
+                        <path d="M5 12h14M13 6l6 6-6 6"/>
+                    </svg>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">To</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+                            <circle cx="12" cy="9" r="2.5"/>
+                        </svg>
+                        <input class="field-input" type="text" name="destination" placeholder="Dream destination"
+                               value="{{ destination if destination else '' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row-2">
+                <div class="field-group">
+                    <label class="field-label">Budget (₹)</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                        </svg>
+                        <input class="field-input" type="number" name="budget" placeholder="e.g. 50000"
+                               value="{{ budget if budget else '' }}" required>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label">Days</label>
+                    <div class="input-wrap">
+                        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="4" width="18" height="18" rx="2"/>
+                            <path d="M16 2v4M8 2v4M3 10h18"/>
+                        </svg>
+                        <input class="field-input" type="number" name="days" placeholder="e.g. 7"
+                               value="{{ days if days else '' }}" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                <span>Plan My Journey</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="18" height="18">
+                    <path d="M5 12h14M13 6l6 6-6 6"/>
+                </svg>
+            </button>
+        </form>
+    </section>
+
+    <!-- ── RESULTS ─────────────────────────────────────────── -->
+    {% if destination %}
+    <section class="results-section">
+
+        <div class="results-header">
+            <span class="results-eyebrow">Your itinerary is ready</span>
+            <h2 class="results-title">{{ source }} <em>→</em> {{ destination }}</h2>
+        </div>
+
+        <!-- ROW 1 — ABOUT + WEATHER + BUDGET + DURATION + MAP -->
+        <div class="cards-grid">
+
+            <!-- ABOUT -->
+            <div class="card card-wide">
+                <div class="card-header">
+                    <span class="card-icon">✦</span>
+                    <h3 class="card-title">About {{ destination }}</h3>
+                </div>
+                {% if description %}
+                    <p class="card-text">{{ description }}</p>
+                {% else %}
+                    <p class="card-text muted">Description not available.</p>
+                {% endif %}
+            </div>
+
+            <!-- WEATHER -->
+            {% if weather %}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">◈</span>
+                    <h3 class="card-title">Weather</h3>
+                </div>
+                <div class="weather-grid">
+                    <div class="weather-stat">
+                        <span class="weather-val">{{ weather.temp }}°</span>
+                        <span class="weather-key">Temp °C</span>
+                    </div>
+                    <div class="weather-stat">
+                        <span class="weather-val">{{ weather.humidity }}%</span>
+                        <span class="weather-key">Humidity</span>
+                    </div>
+                    <div class="weather-stat">
+                        <span class="weather-val">{{ weather.wind }}</span>
+                        <span class="weather-key">Wind m/s</span>
+                    </div>
+                </div>
+                <div class="weather-condition">{{ weather.condition }}</div>
+            </div>
+            {% else %}
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">◈</span>
+                    <h3 class="card-title">Weather</h3>
+                </div>
+                <p class="card-text muted">Weather data not available.</p>
+            </div>
+            {% endif %}
+
+            <!-- BUDGET -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">◇</span>
+                    <h3 class="card-title">Budget</h3>
+                </div>
+                <div class="budget-display">
+                    <span class="budget-currency">₹</span>
+                    <span class="budget-amount">{{ budget }}</span>
+                </div>
+                <p class="budget-per-day">≈ ₹{{ per_day }} per day</p>
+            </div>
+
+            <!-- DURATION -->
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-icon">◉</span>
+                    <h3 class="card-title">Duration</h3>
+                </div>
+                <div class="duration-display">
+                    <span class="duration-number">{{ days }}</span>
+                    <span class="duration-unit">days</span>
+                </div>
+            </div>
+
+            <!-- ROUTE MAP -->
+            <div class="card card-wide">
+                <div class="card-header">
+                    <span class="card-icon">⊕</span>
+                    <h3 class="card-title">Route Map</h3>
+                </div>
+                <div class="route-body">
+                    <div class="route-path">
+                        <span class="route-city">{{ source }}</span>
+                        <span class="route-line"></span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="16" height="16">
+                            <path d="M5 12h14M13 6l6 6-6 6"/>
+                        </svg>
+                        <span class="route-city dest">{{ destination }}</span>
+                    </div>
+                    <a href="{{ map_link }}" target="_blank" class="route-link">
+                        <span>Open in Google Maps</span>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="14" height="14">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- ROW 2 — TICKET BOOKING -->
+        <div class="section-divider">
+            <span class="divider-line"></span>
+            <span class="divider-label">Book Your Trip</span>
+            <span class="divider-line"></span>
+        </div>
+
+        <div class="cards-grid">
+            <div class="card card-wide">
+                <div class="card-header">
+                    <span class="card-icon">✈</span>
+                    <h3 class="card-title">Ticket Booking</h3>
+                </div>
+                <p class="card-text" style="margin-bottom: 20px;">
+                    Book flights, trains, and buses from
+                    <strong style="color:var(--text-primary)">{{ source }}</strong> to
+                    <strong style="color:var(--gold-light)">{{ destination }}</strong>.
+                    Click any option to open the booking site.
+                </p>
+                {% if booking_links %}
+                <div class="booking-grid">
+                    <a href="{{ booking_links.flight }}" target="_blank" class="booking-btn">
+                        <span class="booking-btn-icon">✈️</span>
+                        <span class="booking-btn-label">Flights</span>
+                        <span class="booking-btn-sub">MakeMyTrip</span>
+                    </a>
+                    <a href="{{ booking_links.train }}" target="_blank" class="booking-btn">
+                        <span class="booking-btn-icon">🚆</span>
+                        <span class="booking-btn-label">Train</span>
+                        <span class="booking-btn-sub">IRCTC</span>
+                    </a>
+                    <a href="{{ booking_links.bus }}" target="_blank" class="booking-btn">
+                        <span class="booking-btn-icon">🚌</span>
+                        <span class="booking-btn-label">Bus</span>
+                        <span class="booking-btn-sub">RedBus</span>
+                    </a>
+                </div>
+                {% else %}
+                <p class="card-text muted">Booking links not available.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ROW 3 — NEARBY HOTELS -->
+        <div class="section-divider">
+            <span class="divider-line"></span>
+            <span class="divider-label">Places to Stay</span>
+            <span class="divider-line"></span>
+        </div>
+
+        <div class="cards-grid">
+            <div class="card card-wide">
+                <div class="card-header">
+                    <span class="card-icon">◫</span>
+                    <h3 class="card-title">Nearby Hotels in {{ destination }}</h3>
+                </div>
+                {% if hotels %}
+                <div class="hotels-list">
+                    {% for hotel in hotels %}
+                    <div class="hotel-item">
+                        <span class="hotel-icon">🏨</span>
+                        <div class="hotel-info">
+                            <div class="hotel-name">{{ hotel.name }}</div>
+                            <div class="hotel-address">📍 {{ hotel.address }}</div>
+                        </div>
+                        <span class="hotel-badge">Hotel</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="card-text muted">No hotels found for this destination.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ROW 4 — AI ITINERARY -->
+        <div class="section-divider">
+            <span class="divider-line"></span>
+            <span class="divider-label">AI Itinerary</span>
+            <span class="divider-line"></span>
+        </div>
+
+        <div class="cards-grid">
+            <div class="card card-wide">
+                <div class="card-header">
+                    <span class="card-icon">✦</span>
+                    <h3 class="card-title">Your {{ days }}-Day Plan for {{ destination }}</h3>
+                </div>
+                {% if itinerary %}
+                <div class="itinerary-days">
+                    {% for day in itinerary %}
+                    <div class="day-block">
+                        <div class="day-label">Day {{ loop.index }} — {{ day.title }}</div>
+                        <div class="day-text">{{ day.plan }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <p class="card-text muted">Itinerary not available. Gemini API may be busy — please try again.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- ROW 5 — TRAVEL TIPS -->
+        {% if tips %}
+        <div class="section-divider">
+            <span class="divider-line"></span>
+            <span class="divider-label">Travel Tips</span>
+            <span class="divider-line"></span>
+        </div>
+
+        <div class="cards-grid">
+            <div class="card card-wide">
+                <div class="card-header">
+                    <span class="card-icon">◎</span>
+                    <h3 class="card-title">Tips for {{ destination }}</h3>
+                </div>
+                <div class="tips-list">
+                    {% for tip in tips %}
+                    <div class="tip-item">
+                        <span class="tip-number">{{ loop.index }}</span>
+                        <span>{{ tip }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+    </section>
+    {% endif %}
+
+</main>
+
+<footer class="footer">
+    <span>✦ Wandr — AI Travel Planner</span>
+</footer>
+
+</body>
+</html>
